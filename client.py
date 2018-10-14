@@ -13,6 +13,9 @@ from Crypto.PublicKey import RSA  #Used PycrptoDome
 from Crypto.Random import get_random_bytes #Used PycrptoDome
 from Crypto.Cipher import PKCS1_OAEP
 
+
+
+
 #Send messages over socket
 def sendMessage(message,ip,port):
     s1 = socket.socket()
@@ -60,18 +63,22 @@ else:
     print(sessionCipher)
     print('public key :')
     print(publicKey)
+
     publicKey = publicKey.replace("\r\n", '')
     publicKeyObject = RSA.importKey(publicKey)
+
     cipherEncryptor = PKCS1_OAEP.new(publicKeyObject)
     print(sessionCipher)
+
     sessionCipherKeyEncryptedByPublicKey = cipherEncryptor.encrypt(sessionCipher)
     print(sessionCipherKeyEncryptedByPublicKey)
     response = sendMessage(('SESSIONCIPHER'+str(sessionCipherKeyEncryptedByPublicKey)).encode(),'127.0.0.1',9500)
-    ackEncrypted = response.decode()
-    print(ackEncrypted)
+    ackEncrypted = response
+    print("ACK Encrypted: ", ackEncrypted)
     AESPassword = 'test' 
     AESKey = getKey(AESPassword)
-    ackDecrypte = decrypt(publicKey.encode(), sessionCipher, ackEncrypted)
+    #ackDecrypte = decrypt(publicKey.encode(), sessionCipher, ackEncrypted)
+    ackDecrypte = cipherEncryptor.decrypt(ackEncrypted)
     print(ackDecrypte)
 
 

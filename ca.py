@@ -30,4 +30,4 @@ while True:
     certificate = conn.recv(1024) #Get the certificate from client
     result = validateCertificate(certificate.decode())
     conn.send(result.encode()) #send the result (null OR public_key) back to client
-    s.close()
+s.close()

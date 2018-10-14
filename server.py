@@ -59,12 +59,15 @@ while True:
     clientmessage = conn.recv(1024)
     clientmessageDecoded = clientmessage.decode()
     print(clientmessageDecoded)
+
     if clientmessageDecoded.startswith('GIVEMECERT') : #This means that this is the first request
         conn.send(certificate.encode()) #Send the certificate to client
+
     elif clientmessageDecoded.startswith('GOODBYE'):
         # Check if response is goodbye , then client didn't recognize us
         print('Error in connection to client')
         s.close()
+
     elif clientmessageDecoded.startswith('SESSIONCIPHER'):
         print("CIPHER") 
         sessionCipherReceivedFromClientEncrypted = clientmessageDecoded[13:]
@@ -74,13 +77,14 @@ while True:
         privateKeyObject = RSA.importKey(private_key)
         cipherDecryptor = PKCS1_OAEP.new(privateKeyObject)
         sessionCipherReceivedFromClientDecrypted = cipherDecryptor.decrypt(ast.literal_eval(str(sessionCipherReceivedFromClientEncrypted)))
+        
         print('IV:')
         print(sessionCipherReceivedFromClientDecrypted)
         #Send acknowledgement
         AESPassword = 'test' 
         AESKey = getKey(AESPassword)
-        encryptedACK = encrypt(AESKey, sessionCipherReceivedFromClientDecrypted, "ACK")
-        conn.send(encryptedACK.encode())
-        s.close()
 
-
+        #encryptedACK = encrypt(AESKey, sessionCipherReceivedFromClientDecrypted, "ACK")
+        encryptedACK = cipherDecryptor.encrypt(b"ACK")
+        conn.send(encryptedACK)
+s.close()
