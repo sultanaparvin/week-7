@@ -14,6 +14,7 @@ from Crypto.Random import get_random_bytes #Used PycrptoDome
 from Crypto.Cipher import PKCS1_OAEP
 
 
+AESPassword = 'test' 
 
 
 #Send messages over socket
@@ -44,6 +45,15 @@ def getKey(password):
     hasher = SHA256.new(password.encode('utf-8'))
     return hasher.digest()
 
+#Add padding
+def pad(data):
+    length = 16 - (len(data) % 16)
+    data += chr(length)*length
+    return data
+
+#Remove padding
+def unpad(data):
+    return data[:-data[-1]]
 
 print('Client')
 #Send a request to get the certificate
@@ -59,91 +69,25 @@ if publicKey == 'null':
     print('goodbye')
 else:
     sessionCipher = generateIV()
-    print('IV:')
-    print(sessionCipher)
-    print('public key :')
-    print(publicKey)
-
     publicKey = publicKey.replace("\r\n", '')
     publicKeyObject = RSA.importKey(publicKey)
 
     cipherEncryptor = PKCS1_OAEP.new(publicKeyObject)
-    print(sessionCipher)
-
     sessionCipherKeyEncryptedByPublicKey = cipherEncryptor.encrypt(sessionCipher)
-    print(sessionCipherKeyEncryptedByPublicKey)
     response = sendMessage(('SESSIONCIPHER'+str(sessionCipherKeyEncryptedByPublicKey)).encode(),'127.0.0.1',9500)
     ackEncrypted = response
-    print("ACK Encrypted: ", ackEncrypted)
-    AESPassword = 'test' 
+    #print("ACK Encrypted: ", ackEncrypted)
     AESKey = getKey(AESPassword)
-    #ackDecrypte = decrypt(publicKey.encode(), sessionCipher, ackEncrypted)
-    ackDecrypte = cipherEncryptor.decrypt(ackEncrypted)
-    print(ackDecrypte)
-
-
-
-
-
-
-    ##sessionCipherKeyEncryptedByPublicKey = publicKeyObject.encrypt(sessionCipher,32)
-    #s1.send(sessionCipherKeyEncryptedByPublicKey.encode())
-
-
-
-
-
-####
-    # s1.send('IV'+IV.encode()) #Send IV
-    # s1.send(encrypt(getKey(public_key),IV,'Hello'))
-
-
-
-    # sessionCipherKey = getKey(public_key)
-    # s1.send(sessionCipherKey.encode())
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#     s1.sendsessionCipherKey.encode())
-#     #encryptedCipherKey = encrypt(public_key, generateIV(), sessionCipherKey)
-#     #s1.send(("CIPHERKEY:" + encryptedCipherKey).encode())
-
-#     #5
-#     acknowledgement = s1.recv(1024).decode()
-#     if decrypt(sessionCipherKey, generateIV(), acknowledgement) == sessionCipherKey:
-#         #6
-#         # TODO: Send some encrypted data to the server
-#        encrypted = encrypt(public_key,generateIV(),"Hello")
-#        s1.send(encrypted.encode())
-
-
-
-
-
-# print(s.recv(1024))
-# s1.close()
-
-
-
-
-
-    
-
-
-
+    ackDecrypte = decrypt(AESKey, sessionCipher, ackEncrypted)
+    ackDecrypte = unpad(ackDecrypte) #Remove the padding
+    if ackDecrypte.decode() == 'ACK': #This means that we got the right acknowledgement that we expected
+        #Send the message
+        data = "Hello"
+        data = "MSG" + data
+        data = pad(data) #Padding
+        AESKey = getKey(AESPassword)
+        encryptedMessage = encrypt(AESKey, sessionCipher, data.encode('utf-8'))
+        encryptedMessageFromServer = sendMessage(str(encryptedMessage).encode(),'127.0.0.1',9500)
+        AESKey = getKey(AESPassword)
+        dcrytpedMessageFromServer = decrypt(AESKey, sessionCipher, encryptedMessageFromServer)
+        print("Message from server:"+str(unpad(dcrytpedMessageFromServer).decode()))
